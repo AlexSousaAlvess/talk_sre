@@ -1,25 +1,24 @@
-package com.productservice.models;
+package com.notification_service.models;
 
-import com.productservice.models.enums.Role;
+import com.notification_service.models.enums.Role;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 
-@Builder
-@AllArgsConstructor
-@RequiredArgsConstructor
-@Data
 @Entity
 @Table(name = "tb_user", schema = "sre")
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class UserModel {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String name;
     private String email;
-    private String password;
+
     @Enumerated(EnumType.STRING)
     private Role role;
 }

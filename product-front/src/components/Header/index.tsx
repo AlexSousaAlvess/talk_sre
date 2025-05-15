@@ -10,6 +10,7 @@ import {
   PoweroffOutlined,
 } from '@ant-design/icons';
 import InboxModal from '../InboxModal';
+import { API_NOTIFICATION } from '@/lib/api';
 
 const { Header } = Layout;
 
@@ -22,9 +23,11 @@ const AppHeader = () => {
 
   const fetchUnreadCount = async () => {
     try {
-      //const response = await API.get('/messages/unread-count'); // Substitua pelo endpoint real
-      // setUnreadCount(response.data.count);
-      setUnreadCount(3);
+      const storedUser = localStorage.getItem('user');
+      const user = storedUser ? JSON.parse(storedUser) : null;
+      if (!user?.id) return;
+      const response = await API_NOTIFICATION.get(`/notifications/unread-count/${user.id}`);
+      setUnreadCount(response.data);
     } catch (error) {
       console.error('Erro ao buscar contagem de não lidas:', error);
     }
@@ -37,6 +40,13 @@ const AppHeader = () => {
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
+
+      const handleUpdate = () => fetchUnreadCount();
+      window.addEventListener("notification-created", handleUpdate);
+
+      return () => {
+        window.removeEventListener("notification-created", handleUpdate);
+      };
     }
   }, []);
 

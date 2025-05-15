@@ -42,7 +42,7 @@ const Login = () => {
         <div
           style={{
             background: '#fff',
-            height: '30vh',
+            height: '50vh',
             padding: 24,
             marginTop: '10px',
             borderRadius: '10px',

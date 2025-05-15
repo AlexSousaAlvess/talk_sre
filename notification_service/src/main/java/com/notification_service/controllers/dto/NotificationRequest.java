@@ -1,15 +1,13 @@
-package com.productservice.controllers.dto;
+package com.notification_service.controllers.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Builder
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
-public class QuantityUpdate {
-    private Integer quantity;
+public class NotificationRequest {
     private Long userId;
+    private String message;
 }

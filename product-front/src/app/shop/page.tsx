@@ -44,15 +44,25 @@ const Shop = () => {
   }
 
   const purchase = async (item: IProduct) => {
-    try {
-      await API.patch(`/product/${item?.id}`,
-        { 'quantity': 1 }
-      )
-      toast("Compra feita");
-    } catch (e) {
-      console.log(e);
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user?.id;
+    if (!userId) {
+      toast.error("Usuário não autenticado");
+      return;
     }
+    await API.patch(`/product/${item?.id}`, {
+      quantity: 1,
+      userId: userId
+    });
+    toast("Compra feita");
+    window.dispatchEvent(new Event("notification-created"));
+  } catch (e) {
+    console.log(e);
+    toast.error("Erro ao realizar compra");
   }
+};
+
 
   useEffect(() => {
     listar();
