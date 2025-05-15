@@ -17,8 +17,21 @@ const AppHeader = () => {
   const router = useRouter();
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+
+  const fetchUnreadCount = async () => {
+    try {
+      //const response = await API.get('/messages/unread-count'); // Substitua pelo endpoint real
+      // setUnreadCount(response.data.count);
+      setUnreadCount(3);
+    } catch (error) {
+      console.error('Erro ao buscar contagem de não lidas:', error);
+    }
+  };
 
   useEffect(() => {
+    fetchUnreadCount();
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
@@ -65,7 +78,7 @@ const AppHeader = () => {
         <Button
           type="link"
           icon={
-            <Badge count={3} offset={[0, 0]}>
+            <Badge count={unreadCount} offset={[0, 0]}>
               <AlertOutlined style={{ color: '#fff' }} />
             </Badge>
           }
