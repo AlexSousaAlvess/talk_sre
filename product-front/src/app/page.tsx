@@ -1,49 +1,35 @@
 'use client'
-import { API } from '@/lib/api';
-import { Button, Input, InputNumber, Layout, Menu, Typography } from 'antd';
-import { PoweroffOutlined, AlertOutlined, HomeOutlined, ShopOutlined, UserAddOutlined, ProductOutlined } from '@ant-design/icons';
-import TextArea from 'antd/es/input/TextArea';
-import { useState } from 'react';
-import { useRouter } from "next/navigation";
-import { valueType } from 'antd/es/statistic/utils';
 
-const { Header, Content, Footer } = Layout;
+import { Card, Col, Layout, Row, Statistic } from 'antd';
+import { ArrowUpOutlined } from '@ant-design/icons';
+
+import { useEffect, useState } from 'react';
+import { API } from '@/lib/api';
+import { valueType } from 'antd/es/statistic/utils';
+import AppHeader from '@/components/Header';
+
+const { Content, Footer } = Layout;
 
 const Home = () => {
+  const [purchase, setPurchase] = useState<valueType | null>();
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState<valueType | null>();
-  const [quantity, setQuantity] = useState<valueType | null>();
-  const router = useRouter();
-
-  const salvar = () => {
-    API.post("", {
-      'name': name,
-      'description': description,
-      'price': price,
-      'quantity': quantity
-    })
+  const listar = async () => {
+    try {
+      const response = await API.get("/dashboard")
+      setPurchase(response.data);
+    } catch (e) {
+      console.log(e);
+    }
   }
+
+  useEffect(() => {
+    listar();
+  }, [])
 
   return (
     <Layout>
-      <Header style={{ display: 'flex', alignItems: 'center' }}>
-        <Menu
-          theme="dark"
-          mode="horizontal"
-          defaultSelectedKeys={['2']}
-          //items={()=>(<Typography.Title level={5}>Nome</Typography.Title>)}
-          style={{ flex: 1, minWidth: 0 }}
-        >
-          <Button color='primary' variant='link' icon={<HomeOutlined/>} onClick={()=>router.push("/")} >Home</Button>
-          <Button color='primary' variant='link' icon={<ShopOutlined/>} onClick={()=>router.push("/shop")} >Shop</Button>
-          <Button color='primary' variant='link' icon={<ProductOutlined/>} onClick={()=>router.push("/product")} >Product</Button>
-          <Button color='primary' variant='link' icon={<UserAddOutlined/>} onClick={()=>router.push("/register")} >Register</Button>
-        </Menu>
-          <Button color='primary' variant='link' icon={<AlertOutlined/>} onClick={()=>router.push("/register")}>{<span style={{color: 'yellow'}}>3</span>}</Button>
-          <Button color='primary' variant='link' icon={<PoweroffOutlined/>} onClick={()=>router.push("/register")} >Logout</Button>
-      </Header>
+      <AppHeader/>
+
       <Content style={{ padding: '0 48px' }}>
         <div
           style={{
@@ -54,7 +40,19 @@ const Home = () => {
             borderRadius: '10px',
           }}
         >
-          Dashboard
+          <Row gutter={16}>
+            <Col span={12}>
+              <Card variant="borderless">
+                <Statistic
+                  title="Valor Total de vendas"
+                  value={String(purchase)}
+                  precision={2}
+                  valueStyle={{ color: '#3f8600' }}
+                  prefix={purchase != 0 ? <ArrowUpOutlined /> : null}
+                />
+              </Card>
+            </Col>
+          </Row>
         </div>
       </Content>
       <Footer style={{ textAlign: 'center' }}>

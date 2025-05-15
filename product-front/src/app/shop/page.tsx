@@ -1,15 +1,13 @@
 'use client'
 import { API } from '@/lib/api';
-import { Alert, Button, Card, Divider, Input, InputNumber, Layout, List, Menu, Modal, Space, Table, TableProps, Tag, Typography } from 'antd';
-import { PoweroffOutlined, AlertOutlined, HomeOutlined, ShopOutlined, UserAddOutlined, ProductOutlined, PlusOutlined, DeleteOutlined, EditOutlined, SaveOutlined, ShoppingCartOutlined } from '@ant-design/icons';
-import TextArea from 'antd/es/input/TextArea';
-import { useDeferredValue, useEffect, useState } from 'react';
-import { useRouter } from "next/navigation";
-import { valueType } from 'antd/es/statistic/utils';
+import { Button, Card, Divider, Input, Layout, List, Typography } from 'antd';
+import { ShoppingCartOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
 import { SearchProps } from 'antd/es/input';
 import { ToastContainer, toast } from 'react-toastify';
+import AppHeader from '@/components/Header';
 
-const { Header, Content, Footer } = Layout;
+const { Content, Footer } = Layout;
 
 const { Search } = Input;
 
@@ -22,15 +20,7 @@ interface IProduct {
 }
 
 const Shop = () => {
-
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState<valueType | null>();
-  const [quantity, setQuantity] = useState<valueType | null>();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [productList, setProductList] = useState<Array<IProduct>>();
-  const [productFound, setProductFound] = useState<Array<IProduct | []>>();
-  const router = useRouter();
 
   const onSearch: SearchProps['onSearch'] = (value) => {
     const result = productList?.filter((product) => {
@@ -45,18 +35,18 @@ const Shop = () => {
 
   const listar = async () => {
     try {
-      const response = await API.get("")
+      const response = await API.get("/product")
       setProductList(response.data);
-      setIsModalOpen(false);
+
     } catch (e) {
       console.log(e);
     }
   }
 
-  const purchase = async (item:IProduct) => {
-    try{
-      await API.patch(`/${item?.id}`, 
-        {quantityUpdate: 1}
+  const purchase = async (item: IProduct) => {
+    try {
+      await API.patch(`/product/${item?.id}`,
+        { 'quantity': 1 }
       )
       toast("Compra feita");
     } catch (e) {
@@ -70,21 +60,8 @@ const Shop = () => {
 
   return (
     <Layout>
-      <Header style={{ display: 'flex', alignItems: 'center' }}>
-        <Menu
-          theme="dark"
-          mode="horizontal"
-          defaultSelectedKeys={['2']}
-          style={{ flex: 1, minWidth: 0 }}
-        >
-          <Button color='primary' variant='link' icon={<HomeOutlined />} onClick={() => router.push("/")} >Home</Button>
-          <Button color='primary' variant='link' icon={<ShopOutlined />} onClick={() => router.push("/shop")} >Shop</Button>
-          <Button color='primary' variant='link' icon={<ProductOutlined />} onClick={() => router.push("/product")} >Product</Button>
-          <Button color='primary' variant='link' icon={<UserAddOutlined />} onClick={() => router.push("/register")} >Register</Button>
-        </Menu>
-        <Button color='primary' variant='link' icon={<AlertOutlined />} onClick={() => { }}>{<span style={{ color: 'yellow' }}>3</span>}</Button>
-        <Button color='primary' variant='link' icon={<PoweroffOutlined />} onClick={() => { }} >Logout</Button>
-      </Header>
+      <AppHeader/>
+
       <Content style={{ padding: '0 48px' }}>
         <div
           style={{
@@ -102,11 +79,11 @@ const Shop = () => {
             dataSource={productList}
             renderItem={(item) => (
               <List.Item>
-                <Card title={item.name} style={{margin: '0 10 0 0', width: 250}}>
-                  <Typography.Title level={5} style={{}}>{item.description}</Typography.Title>
-                  <Typography.Title level={5} style={{}}>R${item.price}</Typography.Title>
-                  <Button type="primary" icon={<ShoppingCartOutlined />} onClick={()=>{purchase(item)}} style={{width: '100%'}}>Comprar</Button>
-                  
+                <Card title={item.name} style={{ margin: '0 10 0 0', width: 250 }}>
+                  <Typography.Text style={{ display: 'block' }}>{item.description}</Typography.Text>
+                  <Typography.Text style={{ display: 'block' }}>R${item.price}</Typography.Text>
+                  <Button type="primary" icon={<ShoppingCartOutlined />} onClick={() => { purchase(item) }} style={{ width: '100%' }}>Comprar</Button>
+
                 </Card>
               </List.Item>
             )}

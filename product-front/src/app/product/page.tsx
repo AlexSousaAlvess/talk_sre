@@ -1,14 +1,14 @@
 'use client'
 import { API } from '@/lib/api';
-import { Button, Divider, Input, InputNumber, Layout, Menu, Modal, Space, Table, TableProps, Tag, Typography } from 'antd';
-import { PoweroffOutlined, AlertOutlined, HomeOutlined, ShopOutlined, UserAddOutlined, ProductOutlined, PlusOutlined, DeleteOutlined, EditOutlined, SaveOutlined } from '@ant-design/icons';
+import { Button, Divider, Input, InputNumber, Layout, Modal, Space, Table, TableProps, Typography } from 'antd';
+import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import TextArea from 'antd/es/input/TextArea';
-import { useDeferredValue, useEffect, useState } from 'react';
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from 'react';
 import { valueType } from 'antd/es/statistic/utils';
 import { SearchProps } from 'antd/es/input';
+import AppHeader from '@/components/Header';
 
-const { Header, Content, Footer } = Layout;
+const { Content, Footer } = Layout;
 
 const { Search } = Input;
 
@@ -22,13 +22,14 @@ interface IProduct {
 
 const Product = () => {
 
+  const [id, setId] = useState<number | null>();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState<valueType | null>();
   const [quantity, setQuantity] = useState<valueType | null>();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalEditOpen, setIsModalEditOpen] = useState(false);
   const [productList, setProductList] = useState<Array<IProduct>>();
-  const router = useRouter();
 
   const showModal = () => {
     setIsModalOpen(true);
@@ -42,35 +43,46 @@ const Product = () => {
     setIsModalOpen(false);
   };
 
+  const handleEditOk = () => {
+    salvar();
+  };
+
+  const handleEditCancel = () => {
+    setIsModalEditOpen(false);
+  };
+
   const onSearch: SearchProps['onSearch'] = (value) => {
-    const result = productList?.filter((product)=>{
-      if(product.name == value){
+    const result = productList?.filter((product) => {
+      if (product.name == value) {
         return product;
       }
     })
-    if(result){
+    if (result) {
       setProductList(result);
     }
   };
 
   const salvar = async () => {
-    await API.post("", {
-        'name': name,
-        'description': description,
-        'price': price,
-        'quantity': quantity
-      });
+    await API.post("/product", {
+      'id': id,
+      'name': name,
+      'description': description,
+      'price': price,
+      'quantity': quantity
+    });
     await listar();
+    setId(null);
     setName('');
-    setDescription(''),
-    setPrice(null),
-    setQuantity(null),
+    setDescription('');
+    setPrice(null);
+    setQuantity(null);
     setIsModalOpen(false);
+    setIsModalEditOpen(false);
   }
 
   const listar = async () => {
     try {
-      const response = await API.get("")
+      const response = await API.get("/product")
       setProductList(response.data);
       setIsModalOpen(false);
     } catch (e) {
@@ -79,17 +91,19 @@ const Product = () => {
   }
 
   const deletar = async (id: number) => {
-    await API.delete(`/${id}`),
-    await listar();
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    await API.delete(`/product/${id}`),
+      await listar();
   }
 
-  const editar = (props:IProduct) => {
-    const {id, name, description, price, quantity} = props;
+  const editar = (props: IProduct) => {
+    const { id, name, description, price, quantity } = props;
+    setId(id);
     setName(name);
     setDescription(description);
     setPrice(price);
     setQuantity(quantity);
-    setIsModalOpen(true);
+    setIsModalEditOpen(true);
   }
 
   useEffect(() => {
@@ -131,21 +145,8 @@ const Product = () => {
 
   return (
     <Layout>
-      <Header style={{ display: 'flex', alignItems: 'center' }}>
-        <Menu
-          theme="dark"
-          mode="horizontal"
-          defaultSelectedKeys={['2']}
-          style={{ flex: 1, minWidth: 0 }}
-        >
-          <Button color='primary' variant='link' icon={<HomeOutlined />} onClick={() => router.push("/")} >Home</Button>
-          <Button color='primary' variant='link' icon={<ShopOutlined />} onClick={() => router.push("/shop")} >Shop</Button>
-          <Button color='primary' variant='link' icon={<ProductOutlined />} onClick={() => router.push("/product")} >Product</Button>
-          <Button color='primary' variant='link' icon={<UserAddOutlined />} onClick={() => router.push("/register")} >Register</Button>
-        </Menu>
-        <Button color='primary' variant='link' icon={<AlertOutlined />} onClick={() => { }}>{<span style={{ color: 'yellow' }}>3</span>}</Button>
-        <Button color='primary' variant='link' icon={<PoweroffOutlined />} onClick={() => { }} >Logout</Button>
-      </Header>
+      <AppHeader/>
+
       <Content style={{ padding: '0 48px' }}>
         <div
           style={{
@@ -170,11 +171,11 @@ const Product = () => {
           onCancel={handleCancel}
         >
           <div>
-            <Typography.Title level={5}>Nome</Typography.Title>
+            <Typography.Text>Nome</Typography.Text>
             <Input onChange={(e) => setName(e.target.value)} value={name} />
           </div>
           <div style={{ marginTop: 5 }}>
-            <Typography.Title level={5}>Descrição</Typography.Title>
+            <Typography.Text>Descrição</Typography.Text>
             <TextArea
               showCount
               maxLength={100}
@@ -184,11 +185,11 @@ const Product = () => {
             />
           </div>
           <div style={{ marginTop: 5 }}>
-            <Typography.Title level={5}>Valor</Typography.Title>
+            <Typography.Text style={{ display: 'block' }}>Valor</Typography.Text>
             <InputNumber onChange={(e) => setPrice(e)} value={price} style={{ width: 300 }} />
           </div>
           <div style={{ marginTop: 5 }}>
-            <Typography.Title level={5}>Quantidade</Typography.Title>
+            <Typography.Text style={{ display: 'block' }}>Quantidade</Typography.Text>
             <InputNumber onChange={(e) => setQuantity(e)} value={quantity} style={{ width: 300 }} />
           </div>
         </Modal>
@@ -196,16 +197,16 @@ const Product = () => {
         <Modal
           title="Editar produto"
           closable={{ 'aria-label': 'Custom Close Button' }}
-          open={isModalOpen}
-          onOk={handleOk}
-          onCancel={handleCancel}
+          open={isModalEditOpen}
+          onOk={handleEditOk}
+          onCancel={handleEditCancel}
         >
           <div>
-            <Typography.Title level={5}>Nome</Typography.Title>
+            <Typography.Text>Nome</Typography.Text>
             <Input onChange={(e) => setName(e.target.value)} value={name} />
           </div>
           <div style={{ marginTop: 5 }}>
-            <Typography.Title level={5}>Descrição</Typography.Title>
+            <Typography.Text>Descrição</Typography.Text>
             <TextArea
               showCount
               maxLength={100}
@@ -215,11 +216,11 @@ const Product = () => {
             />
           </div>
           <div style={{ marginTop: 5 }}>
-            <Typography.Title level={5}>Valor</Typography.Title>
+            <Typography.Text style={{ display: 'block' }}>Valor</Typography.Text>
             <InputNumber onChange={(e) => setPrice(e)} value={price} style={{ width: 300 }} />
           </div>
           <div style={{ marginTop: 5 }}>
-            <Typography.Title level={5}>Quantidade</Typography.Title>
+            <Typography.Text style={{ display: 'block' }}>Quantidade</Typography.Text>
             <InputNumber onChange={(e) => setQuantity(e)} value={quantity} style={{ width: 300 }} />
           </div>
         </Modal>

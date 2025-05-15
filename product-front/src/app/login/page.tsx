@@ -1,67 +1,77 @@
 'use client'
 import { API } from '@/lib/api';
-import { Button, Input, InputNumber, Layout, Menu, Typography } from 'antd';
-import { PoweroffOutlined, AlertOutlined, HomeOutlined, ShopOutlined, UserAddOutlined, ProductOutlined } from '@ant-design/icons';
-import TextArea from 'antd/es/input/TextArea';
+import { Button, Input, Layout, Typography } from 'antd';
 import { useState } from 'react';
 import { useRouter } from "next/navigation";
-import { valueType } from 'antd/es/statistic/utils';
 
-const { Header, Content, Footer } = Layout;
+const { Content, Footer } = Layout;
 
 const Login = () => {
-
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState<valueType | null>();
-  const [quantity, setQuantity] = useState<valueType | null>();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const router = useRouter();
 
-  const salvar = () => {
-    API.post("", {
-      'name': name,
-      'description': description,
-      'price': price,
-      'quantity': quantity
-    })
-  }
+  const login = async () => {
+    try {
+      const response = await API.post('/users/login', {
+        email,
+        password
+      });
+
+      const user = response.data;
+      localStorage.setItem('user', JSON.stringify(user));
+
+      // Redirecionamento com base no tipo de usuário
+      if (user.role === 'OPERATOR') {
+        router.push('/product');
+      } else if (user.role === 'CUSTOMER') {
+        router.push('/shop');
+      } else {
+        alert('Perfil de usuário não reconhecido.');
+      }
+
+    } catch (err) {
+      console.error("Erro ao fazer login:", err);
+      alert("Email ou senha inválidos");
+    }
+  };
 
   return (
     <Layout>
-      <Header style={{ display: 'flex', alignItems: 'center' }}>
-        <Menu
-          theme="dark"
-          mode="horizontal"
-          defaultSelectedKeys={['2']}
-          //items={()=>(<Typography.Title level={5}>Nome</Typography.Title>)}
-          style={{ flex: 1, minWidth: 0 }}
-        >
-          <Button color='primary' variant='link' icon={<HomeOutlined/>} onClick={()=>router.push("/")} >Home</Button>
-          <Button color='primary' variant='link' icon={<ShopOutlined/>} onClick={()=>router.push("/shop")} >Shop</Button>
-          <Button color='primary' variant='link' icon={<ProductOutlined/>} onClick={()=>router.push("/product")} >Product</Button>
-          <Button color='primary' variant='link' icon={<UserAddOutlined/>} onClick={()=>router.push("/register")} >Register</Button>
-        </Menu>
-          <Button color='primary' variant='link' icon={<AlertOutlined/>} onClick={()=>router.push("/register")}>{<span style={{color: 'yellow'}}>3</span>}</Button>
-          <Button color='primary' variant='link' icon={<PoweroffOutlined/>} onClick={()=>router.push("/register")} >Logout</Button>
-      </Header>
       <Content style={{ padding: '0 48px' }}>
         <div
           style={{
             background: '#fff',
-            height: '100vh',
+            height: '30vh',
             padding: 24,
             marginTop: '10px',
             borderRadius: '10px',
+            maxWidth: 400,
+            margin: '50px auto'
           }}
         >
-          content
+          <Typography.Title level={3}>Login</Typography.Title>
+
+          <div style={{ marginBottom: 10 }}>
+            <Typography.Text>Email</Typography.Text>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <Typography.Text>Senha</Typography.Text>
+            <Input.Password value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+
+          <Button type="primary" onClick={login} block>
+            Entrar
+          </Button>
         </div>
       </Content>
       <Footer style={{ textAlign: 'center' }}>
         By Alex ©{new Date().getFullYear()}
       </Footer>
     </Layout>
-  )
-}
+  );
+};
 
 export default Login;
