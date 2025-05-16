@@ -11,7 +11,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.notification_service.services.NotificationService;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @RequiredArgsConstructor
@@ -24,6 +26,7 @@ public class NotificationController {
 
     @GetMapping("/stream")
     public SseEmitter stream() {
+        //O servidor ira enviar eventos em tempo real para os clientes que estiverem conectados
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
         emitters.add(emitter);
         emitter.onCompletion(() -> emitters.remove(emitter));
@@ -34,9 +37,44 @@ public class NotificationController {
     @PostMapping("/send")
     public ResponseEntity<Void> sendNotification(@RequestBody NotificationRequest request) {
         System.out.println("Mensagem recebida: " + request.getMessage() + request.getUserId());
-        notificationService.save(request);
+
+        // salva a notificação
+        NotificationModel savedNotification = notificationService.save(request);
+
+        // conta notificações não lidas do usuário
+        long unreadCount = notificationService.countByUserIdAndReadFalse(request.getUserId());
+
+        // cria o objeto de resposta combinado
+        NotificationResponse response = new NotificationResponse(
+                savedNotification.getId(),
+                savedNotification.getMessage(),
+                savedNotification.getRead(),
+                savedNotification.getCreatedAt()
+        );
+
+        // objeto a ser enviado via SSE
+        Map<String, Object> ssePayload = new HashMap<>();
+        ssePayload.put("notification", response);
+        ssePayload.put("unreadCount", unreadCount);
+        ssePayload.put("userId", request.getUserId());
+
+        // envia para todos os emitters conectados
+        List<SseEmitter> deadEmitters = new CopyOnWriteArrayList<>();
+        emitters.forEach(emitter -> {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("notification")
+                        .data(ssePayload));
+            } catch (IOException e) {
+                deadEmitters.add(emitter);
+            }
+        });
+
+        emitters.removeAll(deadEmitters); // remove desconectados
+
         return ResponseEntity.ok().build();
     }
+
 
     @GetMapping("/all")
     public ResponseEntity<List<NotificationModel>> getAll(){

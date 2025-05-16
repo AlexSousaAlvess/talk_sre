@@ -11,44 +11,45 @@ import {
 } from '@ant-design/icons';
 import InboxModal from '../InboxModal';
 import { API_NOTIFICATION } from '@/lib/api';
+import { ToastContainer, toast } from 'react-toastify';
 
 const { Header } = Layout;
 
 const AppHeader = () => {
   const router = useRouter();
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string; id: number } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-
-  const fetchUnreadCount = async () => {
-    try {
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
-      if (!user?.id) return;
-      const response = await API_NOTIFICATION.get(`/notifications/unread-count/${user.id}`);
-      setUnreadCount(response.data);
-    } catch (error) {
-      console.error('Erro ao buscar contagem de não lidas:', error);
-    }
-  };
-
   useEffect(() => {
-    fetchUnreadCount();
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser);
+      setUser(parsed);
 
-      const handleUpdate = () => fetchUnreadCount();
-      window.addEventListener("notification-created", handleUpdate);
-
-      return () => {
-        window.removeEventListener("notification-created", handleUpdate);
-      };
+      API_NOTIFICATION.get(`/notifications/unread-count/${parsed.id}`)
+        .then((res) => setUnreadCount(res.data))
+        .catch((err) => console.error("Erro ao buscar notificações:", err));
     }
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const eventSource = new EventSource('http://localhost:8081/notifications/stream');
+
+    eventSource.addEventListener("notification", (event) => {
+      const data = JSON.parse(event.data);
+
+      // Aqui você pode acessar os dados:
+      console.log("Payload recebido via SSE:", data);
+      toast.success(data.notification.message);
+
+        setUnreadCount(data.unreadCount);
+    });
+
+    return () => eventSource.close();
+  }, [user]);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -61,21 +62,13 @@ const AppHeader = () => {
         <Menu theme="dark" mode="horizontal" style={{ flex: 1, minWidth: 0 }}>
           {user?.role === 'OPERATOR' && (
             <>
-              <Menu.Item key="home" icon={<HomeOutlined />} onClick={() => router.push('/')}>
-                Home
-              </Menu.Item>
-              <Menu.Item key="product" icon={<ProductOutlined />} onClick={() => router.push('/product')}>
-                Product
-              </Menu.Item>
-              <Menu.Item key="register" icon={<UserAddOutlined />} onClick={() => router.push('/register')}>
-                Register
-              </Menu.Item>
+              <Menu.Item key="home" icon={<HomeOutlined />} onClick={() => router.push('/')}>Home</Menu.Item>
+              <Menu.Item key="product" icon={<ProductOutlined />} onClick={() => router.push('/product')}>Product</Menu.Item>
+              <Menu.Item key="register" icon={<UserAddOutlined />} onClick={() => router.push('/register')}>Register</Menu.Item>
             </>
           )}
           {user?.role === 'CUSTOMER' && (
-            <Menu.Item key="shop" icon={<ShopOutlined />} onClick={() => router.push('/shop')}>
-              Shop
-            </Menu.Item>
+            <Menu.Item key="shop" icon={<ShopOutlined />} onClick={() => router.push('/shop')}>Shop</Menu.Item>
           )}
         </Menu>
 
@@ -102,9 +95,12 @@ const AppHeader = () => {
         >
           <span style={{ color: '#fff' }}>Logout</span>
         </Button>
+      <ToastContainer />
       </Header>
 
-      <InboxModal visible={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {user && (
+        <InboxModal visible={isModalOpen} onClose={() => setIsModalOpen(false)} userId={user.id} />
+      )}
     </>
   );
 };

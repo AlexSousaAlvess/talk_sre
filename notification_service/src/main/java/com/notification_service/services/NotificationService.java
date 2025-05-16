@@ -8,7 +8,7 @@ import java.util.List;
 public interface NotificationService {
     void createAndSendNotification(String message, List<SseEmitter> emitters);
 
-    void save(NotificationRequest request);
+    NotificationModel save(NotificationRequest request);
 
     List<NotificationModel> findAll();
 

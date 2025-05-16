@@ -44,13 +44,9 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void save(NotificationRequest request) {
-        System.out.println("Recebendo request: "+request);
-
+    public NotificationModel save(NotificationRequest request) {
         UserModel user = userRepository.findById(request.getUserId())
-                .orElseThrow(()-> new RuntimeException(("Usuario nao encontrado")));
-
-        System.out.println("Buscando usuário ID: " + user.getName());
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         NotificationModel notification = NotificationModel.builder()
                 .message(request.getMessage())
@@ -58,7 +54,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .user(user)
                 .build();
 
-        notificationRepository.save(notification);
+        return notificationRepository.save(notification);
     }
 
     @Override

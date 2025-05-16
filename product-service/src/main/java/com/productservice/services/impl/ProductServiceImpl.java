@@ -43,13 +43,18 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductModel updateQuantity(Long id, QuantityUpdate quantityUpdate) {
+        //info do produto
         ProductModel productModel = productRepository.findById(id).orElseThrow();
+
+        //calculo
         productModel.setQuantity(productModel.getQuantity() - quantityUpdate.getQuantity());
 
+        //salva a compra
         PurchaseModel purchaseModel = new PurchaseModel();
         purchaseModel.setPurchase(productModel.getPrice());
         purchaseRepository.save(purchaseModel);
 
+        //monta a mensagem para notificar
         String message = "Produto " + productModel.getName() + " foi comprado. Valor: R$ " + productModel.getPrice();
         notificationService.sendNotification(new NotificationRequest(quantityUpdate.getUserId(), message));
 

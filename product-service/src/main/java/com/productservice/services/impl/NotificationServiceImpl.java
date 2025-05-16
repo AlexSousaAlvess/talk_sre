@@ -24,7 +24,7 @@ public class NotificationServiceImpl implements NotificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<NotificationRequest> entity = new HttpEntity<>(request, headers);
-
+        //Comunica com outro backend via RestTemplate
         restTemplate.postForEntity(notificationServiceUrl, entity, Void.class);
     }
 }

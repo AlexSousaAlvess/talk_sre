@@ -4,7 +4,6 @@ import { Button, Card, Divider, Input, Layout, List, Typography } from 'antd';
 import { ShoppingCartOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { SearchProps } from 'antd/es/input';
-import { ToastContainer, toast } from 'react-toastify';
 import AppHeader from '@/components/Header';
 
 const { Content, Footer } = Layout;
@@ -48,18 +47,15 @@ const Shop = () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const userId = user?.id;
     if (!userId) {
-      toast.error("Usuário não autenticado");
       return;
     }
     await API.patch(`/product/${item?.id}`, {
       quantity: 1,
       userId: userId
     });
-    toast("Compra feita");
     window.dispatchEvent(new Event("notification-created"));
   } catch (e) {
     console.log(e);
-    toast.error("Erro ao realizar compra");
   }
 };
 
@@ -85,7 +81,7 @@ const Shop = () => {
           <Search placeholder="pesquisar produto" onSearch={onSearch} enterButton style={{ marginTop: 10 }} />
           <Divider />
           <List
-            grid={{ gutter: 16, column: 4 }}
+            grid={{ gutter: 16, column: 2 }}
             dataSource={productList}
             renderItem={(item) => (
               <List.Item>
@@ -98,7 +94,6 @@ const Shop = () => {
               </List.Item>
             )}
           />
-          <ToastContainer />
         </div>
       </Content>
       <Footer style={{ textAlign: 'center' }}>
