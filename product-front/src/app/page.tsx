@@ -11,7 +11,7 @@ import AppHeader from '@/components/Header';
 const { Content, Footer } = Layout;
 
 const Home = () => {
-  const [purchase, setPurchase] = useState<valueType | null>();
+  const [purchase, setPurchase] = useState<valueType | null>(null);
 
   const listar = async () => {
     try {
@@ -23,12 +23,30 @@ const Home = () => {
   }
 
   useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) return;
+
+    const user = JSON.parse(storedUser);
     listar();
+
+    const eventSource = new EventSource(`http://localhost:8081/notifications/stream?userId=${user.id}`);
+
+    eventSource.addEventListener("notification", (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Dashboard recebeu evento:", data);
+      listar();
+    });
+
+    return () => {
+      eventSource.close();
+    };
   }, [])
+
+
 
   return (
     <Layout>
-      <AppHeader/>
+      <AppHeader />
 
       <Content style={{ padding: '0 48px' }}>
         <div
@@ -45,7 +63,7 @@ const Home = () => {
               <Card variant="borderless">
                 <Statistic
                   title="Valor Total de vendas"
-                  value={String(purchase)}
+                  value={purchase ?? 0}
                   precision={2}
                   valueStyle={{ color: '#3f8600' }}
                   prefix={purchase != 0 ? <ArrowUpOutlined /> : null}

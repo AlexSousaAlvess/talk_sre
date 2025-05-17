@@ -35,17 +35,17 @@ const AppHeader = () => {
 
   useEffect(() => {
     if (!user?.id) return;
-
-    const eventSource = new EventSource('http://localhost:8081/notifications/stream');
+    const eventSource = new EventSource(`http://localhost:8081/notifications/stream?userId=${user.id}`);
 
     eventSource.addEventListener("notification", (event) => {
       const data = JSON.parse(event.data);
 
-      // Aqui você pode acessar os dados:
-      console.log("Payload recebido via SSE:", data);
-      toast.success(data.notification.message);
-
+      if(data.userId == user.id){
+        console.log("Payload recebido via SSE:", data);
+        toast.success(data.notification.message);
+  
         setUnreadCount(data.unreadCount);
+      }
     });
 
     return () => eventSource.close();

@@ -3,17 +3,16 @@ package com.notification_service.controllers;
 import com.notification_service.controllers.dto.NotificationRequest;
 import com.notification_service.controllers.dto.NotificationResponse;
 import com.notification_service.models.NotificationModel;
+import com.notification_service.services.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import com.notification_service.services.NotificationService;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @RequiredArgsConstructor
@@ -22,15 +21,22 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class NotificationController {
 
     private final NotificationService notificationService;
-    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final Map<Long, List<SseEmitter>> emittersByUser = new ConcurrentHashMap<>();
 
     @GetMapping("/stream")
-    public SseEmitter stream() {
-        //O servidor ira enviar eventos em tempo real para os clientes que estiverem conectados
+    public SseEmitter stream(@RequestParam Long userId) {
+        //Cria um novo SseEmitter, que representa uma conexão aberta entre servidor e navegador.
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
-        emitters.add(emitter);
-        emitter.onCompletion(() -> emitters.remove(emitter));
-        emitter.onTimeout(() -> emitters.remove(emitter));
+
+        // guarda os emitters por usuário.
+        emittersByUser.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(emitter);
+
+        //Quando o cliente encerra a conexão (fecha a aba ou desconecta), essa função é executada.
+        emitter.onCompletion(() -> emittersByUser.get(userId).remove(emitter));
+
+        //Se a conexão expirar por inatividade, o emitter também é removido da lista.
+        emitter.onTimeout(() -> emittersByUser.get(userId).remove(emitter));
+
         return emitter;
     }
 
@@ -41,10 +47,9 @@ public class NotificationController {
         // salva a notificação
         NotificationModel savedNotification = notificationService.save(request);
 
-        // conta notificações não lidas do usuário
+        // conta notificações do usuário
         long unreadCount = notificationService.countByUserIdAndReadFalse(request.getUserId());
 
-        // cria o objeto de resposta combinado
         NotificationResponse response = new NotificationResponse(
                 savedNotification.getId(),
                 savedNotification.getMessage(),
@@ -52,45 +57,48 @@ public class NotificationController {
                 savedNotification.getCreatedAt()
         );
 
-        // objeto a ser enviado via SSE
+        //objeto que será enviado como o corpo do evento SSE
         Map<String, Object> ssePayload = new HashMap<>();
         ssePayload.put("notification", response);
         ssePayload.put("unreadCount", unreadCount);
         ssePayload.put("userId", request.getUserId());
 
-        // envia para todos os emitters conectados
-        List<SseEmitter> deadEmitters = new CopyOnWriteArrayList<>();
-        emitters.forEach(emitter -> {
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("notification")
-                        .data(ssePayload));
-            } catch (IOException e) {
-                deadEmitters.add(emitter);
-            }
-        });
+        //Recupera a lista de SseEmitters (conexões abertas) associadas ao userId que está no request.
+        List<SseEmitter> userEmitters = emittersByUser.get(request.getUserId());
 
-        emitters.removeAll(deadEmitters); // remove desconectados
+        if (userEmitters != null) {
+            List<SseEmitter> deadEmitters = new ArrayList<>();
+            userEmitters.forEach(emitter -> {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("notification")
+                            .data(ssePayload));
+                } catch (IOException e) {
+                    //Se ocorrer algum erro (ex: o cliente fechou a aba), o emitter é adicionado à lista deadEmitters.
+                    deadEmitters.add(emitter);
+                }
+            });
+            //limpa as conexões mortas
+            userEmitters.removeAll(deadEmitters);
+        }
 
         return ResponseEntity.ok().build();
     }
 
-
     @GetMapping("/all")
-    public ResponseEntity<List<NotificationModel>> getAll(){
+    public ResponseEntity<List<NotificationModel>> getAll() {
         return ResponseEntity.status(HttpStatus.OK).body(notificationService.findAll());
     }
 
     @GetMapping("/by-user/{id}")
-    public ResponseEntity<List<NotificationResponse>> getByUser(@PathVariable Long id){
+    public ResponseEntity<List<NotificationResponse>> getByUser(@PathVariable Long id) {
         List<NotificationModel> notifications = notificationService.findByUser(id);
-
         List<NotificationResponse> response = notifications.stream()
-                .map(n->new NotificationResponse(
-                n.getId(),
-                n.getMessage(),
-                n.getRead(),
-                n.getCreatedAt()
+                .map(n -> new NotificationResponse(
+                        n.getId(),
+                        n.getMessage(),
+                        n.getRead(),
+                        n.getCreatedAt()
                 )).toList();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
@@ -100,5 +108,4 @@ public class NotificationController {
         long count = notificationService.countByUserIdAndReadFalse(userId);
         return ResponseEntity.ok(count);
     }
-
 }
